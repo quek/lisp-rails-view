@@ -80,7 +80,7 @@
 
 (defmethod %eval ((x cons))
   (cond ((eq '= (car x))
-         (emit (raw= (make-ruby-form (cdr x)))))
+         (emit (raw= (make-ruby-form (cdr x) t))))
         ((keywordp (car x))
          (emit (format nil "<~a>" (car x)))
          (loop for i in (cdr x)
@@ -96,14 +96,14 @@
   (and (consp (car (last form)))
        (string-equal "lambda" (caar (last form)))))
 
-(defun make-ruby-form (form)
+(defun make-ruby-form (form &optional new-buffer-p)
   (with-output-to-string (out)
     (let* ((blockp (blockp form))
            (block-form (and blockp (cdar (last form))))
            (main-form (if blockp (butlast form) form)))
       (make-ruby-main-form (car main-form) (cdr main-form) out)
       (when block-form
-        (format out "{~a}" (make-ruby-block block-form))))))
+        (format out "{~a}" (make-ruby-block block-form new-buffer-p))))))
 
 (defmethod make-ruby-main-form (first rest out)
   (format out "~a" (to-ruby-token first))
@@ -120,13 +120,18 @@
           (make-ruby-block-body (ensure-list (cadr rest)))
           (make-ruby-block-body (ensure-list (caddr rest)))))
 
-(defun make-ruby-block (form)
+(defun make-ruby-block (form &optional new-buffer-p)
   (with-output-to-string (out)
     (let ((args (car form))
-          (body (cdr form)))
+          (body (make-ruby-block-body (cdr form))))
       (when args
         (format out "|~{~a~^, ~}|~%" args))
-      (format out "~a" (make-ruby-block-body body)))))
+      (if new-buffer-p
+          (format out "
+[].tap { |b__|
+~a
+}.flatten.join.html_safe~%" body)
+          (format out "~a" body)))))
 
 (defun make-ruby-block-body (form)
   (let ((*buffer* nil))
