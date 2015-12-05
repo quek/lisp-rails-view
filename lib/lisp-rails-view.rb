@@ -16,14 +16,24 @@ module LispRailsView
     def self.call(template)
       file = template.identifier
       x = `sbcl --script #{LISP} #{file}`
-      Rails.logger.debug('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
-      Rails.logger.debug(x)
-      Rails.logger.debug('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
-      <<EOT
-[].tap { |b__|
-    #{x}
-}.flatten
+      code = <<EOT
+[].tap do |b__|
+def b__.push(x)
+  if x.is_a?(Array)
+    x.map do |y|
+      push(y)
+    end
+  else
+    super(x.html_safe? ? x : ERB::Util.h(x))
+  end
+end
+#{x}
+end.flatten
 EOT
+      Rails.logger.debug('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+      Rails.logger.debug(code)
+      Rails.logger.debug('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
+      code
     end
   end
 end

@@ -10,11 +10,17 @@
 
 (defclass raw= (raw) ())
 
+(defclass html-safe ()
+  ((value :initarg :value :accessor value)))
+
 (defun raw (x)
   (make-instance 'raw :value x))
 
 (defun raw= (x)
   (make-instance 'raw= :value x))
+
+(defun html-safe (x)
+  (make-instance 'html-safe :value x))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmacro with-reader (&body body)
@@ -40,28 +46,27 @@
 (defun emit (x)
   (push x *buffer*))
 
-(defun to-ruby-token (x)
-  (typecase x
-    (string x
-     (with-output-to-string (out)
-       (write-char #\" out)
-       (loop for c across (princ-to-string x)
-             do (cond ((char= c #\")
-                       (write-string "\\\"" out))
-                      (t
-                       (write-char c out))))
-              (write-char #\" out)))
-    (t x)))
-
-(defmethod to-ruby-exp (x)
+(defun to-s (x)
   (with-output-to-string (out)
-    (write-string "b__.push(\"" out)
+    (write-char #\" out)
     (loop for c across (princ-to-string x)
           do (cond ((char= c #\")
                     (write-string "\\\"" out))
                    (t
                     (write-char c out))))
-    (write-string "\")" out)))
+    (write-char #\" out)))
+
+(defun to-ruby-token (x)
+  (typecase x
+    (string x
+     (to-s x))
+    (t x)))
+
+(defmethod to-ruby-exp (x)
+  (with-output-to-string (out)
+    (write-string "b__.push(" out)
+    (write-string (to-s x) out)
+    (write-string ")" out)))
 
 (defmethod to-ruby-exp ((x number))
   (to-ruby-exp (princ-to-string x)))
@@ -71,6 +76,9 @@
 
 (defmethod to-ruby-exp ((x raw=))
   (format nil "b__.push(~a)" (value x)))
+
+(defmethod to-ruby-exp ((x html-safe))
+  (format nil "b__.push(~a.html_safe)" (to-s (value x))))
 
 
 (defmethod %eval (x)
@@ -82,10 +90,10 @@
   (cond ((eq '= (car x))
          (emit (raw= (make-ruby-form (cdr x) t))))
         ((keywordp (car x))
-         (emit (format nil "<~a>" (car x)))
+         (emit (html-safe (format nil "<~a>" (car x))))
          (loop for i in (cdr x)
                do (%eval i))
-         (emit (format nil "</~a>" (car x))))
+         (emit (html-safe (format nil "</~a>" (car x)))))
         ((and (symbolp (car x))
               (fboundp (car x)))
          (emit (eval x)))
@@ -128,9 +136,18 @@
         (format out "|~{~a~^, ~}|~%" args))
       (if new-buffer-p
           (format out "
-[].tap { |b__|
+[].tap do |b__|
+def b__.push(x)
+  if x.is_a?(Array)
+    x.map do |y|
+      push(y)
+    end
+  else
+    super(x.html_safe? ? x : ERB::Util.h(x))
+  end
+end
 ~a
-}.flatten.join.html_safe~%" body)
+end.flatten.join.html_safe~%" body)
           (format out "~a" body)))))
 
 (defun make-ruby-block-body (form)
