@@ -1,7 +1,7 @@
-(defpackage :lisp-view
+(defpackage :lisp-rails-view
   (:use :cl))
 
-(in-package :lisp-view)
+(in-package :lisp-rails-view)
 
 (defvar *buffer* nil)
 

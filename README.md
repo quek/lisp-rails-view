@@ -6,15 +6,11 @@ TODO: Write a gem description
 
 Add this line to your application's Gemfile:
 
-    gem 'lisp-view'
+    gem 'lisp-rails-view'
 
 And then execute:
 
     $ bundle
-
-Or install it yourself as:
-
-    $ gem install lisp-view
 
 ## Usage
 
