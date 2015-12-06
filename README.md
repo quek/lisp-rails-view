@@ -1,8 +1,12 @@
-# Lisp::View
+# lisp-rails-view
 
-TODO: Write a gem description
+lisp-rails-view is a templating engine for HTML.
 
 ## Installation
+
+Install SBCL:
+
+    sudo apt-get install sbcl
 
 Add this line to your application's Gemfile:
 
@@ -14,7 +18,15 @@ And then execute:
 
 ## Usage
 
-TODO: Write usage instructions here
+index.html.lisp
+
+```
+(:div#main
+ (:h3.title "title")
+ (:p#foo.bar "Hello"))
+```
+
+see https://github.com/quek/lisp-rails-view/tree/master/examples
 
 ## Contributing
 
