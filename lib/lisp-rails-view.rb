@@ -28,7 +28,7 @@ def b__.push(x)
   end
 end
 #{x}
-end.flatten
+end.flatten.join.html_safe
 EOT
       Rails.logger.debug('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
       Rails.logger.debug(code)

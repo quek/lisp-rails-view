@@ -90,15 +90,77 @@
   (cond ((eq '= (car x))
          (emit (raw= (make-ruby-form (cdr x) t))))
         ((keywordp (car x))
-         (emit (html-safe (format nil "<~a>" (car x))))
-         (loop for i in (cdr x)
-               do (%eval i))
-         (emit (html-safe (format nil "</~a>" (car x)))))
+         (process-tag x))
         ((and (symbolp (car x))
               (fboundp (car x)))
          (emit (eval x)))
         (t
          (emit (raw (make-ruby-form x))))))
+
+(defun process-tag (form)
+  (multiple-value-bind (tag id classes) (parse-tag (car form))
+    (multiple-value-bind (attributes body /-p) (parse-tag-args (cdr form))
+      (when classes
+        (let ((kv (assoc "class" attributes :test #'string=)))
+          (when kv
+            (setf (cdr kv) `(append ',classes
+                                    (ensure-list ,(cdr kv)))
+                  classes nil))))
+      (emit (html-safe (with-output-to-string (out)
+                         (format out "<~a" tag)
+                         (when id
+                           (format out " id=\"~a\"" id))
+                         (when classes
+                           (format out " class=\"~{~a~^ ~}\"" classes))
+                         (loop for (k . v) in attributes do
+                           (if (constantp v)
+                               (if (eq v t)
+                                   (format out " ~a" k)
+                                   (format out " ~a=\"~a\"" k v))
+                               (format out "#{~a == true ? \"~a\" : \"~a=\"~a\"\"}" v k k v)))
+                         (if /-p
+                             (write-string " />" out)
+                             (write-string ">" out)))))
+      (loop for i in body
+            do (%eval i))
+      (emit (html-safe (format nil "</~a>" tag))))))
+
+(defun parse-tag (tag)
+  (let* ((str (string-downcase (symbol-name tag)))
+         (p# (position #\# str))
+         (p. (position #\. str)))
+    (cond ((and (not p#) (not p.))
+           str)
+          ((and p# (not p.))
+           (values (subseq str 0 p#)
+                   (subseq str (1+ p#))))
+          ((and (not p#) p.)
+           (values (subseq str 0 p.)
+                   nil
+                   #1=(loop for start = (1+ p.) then (1+ end)
+                            for end = (position #\. str :start start)
+                            collect (subseq str start end)
+                            unless end
+                              do (loop-finish))))
+          (t
+           (values (subseq str 0 p#)
+                   (subseq str (1+ p#) p.)
+                   #1#)))))
+
+(defun parse-tag-args (args)
+  (let (attributes)
+    (labels ((f (args)
+               (if (and (consp args)
+                        (keywordp (car args)))
+                   (progn
+                     (push (cons (string-downcase (car args)) (cadr args)) attributes)
+                     (f (cddr args)))
+                   (values (nreverse attributes)
+                           args
+                           (if (atom args)
+                               args
+                               (cdr (last args)))))))
+      (f args))))
 
 (defun blockp (form)
   (and (consp (car (last form)))
