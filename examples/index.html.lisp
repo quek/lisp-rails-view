@@ -30,29 +30,35 @@
 
 (:h3 "Ruby のコード")
 
-(:div
- (:p "ねねこ")
- (:p (= @facilities first name))
- (:p (= @facilities.first.name))
- (:p (= @facilities[1] name)))
+(:p "ふつうに . かスペースです。")
 
-(:p (= Time.now))
-(:p (= Time.now.to_s (\:datetime)))
-(:p (= @facilities.map (&\:name)))
-(:p (= @facilities map (&\:name) join ("、")))
+(:div
+ (:p "(= @facilities first name) => " (= @facilities first name))
+ (:p "(= @facilities.first.name) => "(= @facilities.first.name))
+ (:p "(= @facilities[1] name) => "(= @facilities[1] name)))
+
+(:p "引数は括弧でかこってください。CL の都合上 : は \\ でエスケープしてください。")
+
+(:p "(= Time.now) => "(= Time.now))
+(:p "(= Time.now.to_s (\:datetime)) => "(= Time.now.to_s (\:datetime)))
+(:p "(= @facilities.map (&\:name)) => "(= @facilities.map (&\:name)))
+(:p "(= @facilities map (&\:name) join (\"、\")) => "(= @facilities map (&\:name) join ("、")))
 
 
 (:h3 "each")
 
+(:p "ブロックは lambda にしてください。")
+
 (:p
  (:pre "(:ul
-   (@facilities each (lambda (facility)
-                     (:li (= facility.name)))))")
+   (@facilities each (lambda (facility) (:li (= facility.name)))))")
  (:ul
   (@facilities each (lambda (facility)
                       (:li (= facility.name))))))
 
 (:h3 "if")
+
+(:p "if もなんとか書けます。")
 
 (:p
  (:pre
@@ -63,20 +69,26 @@
      "偶数"
      "奇数"))
 
-(:p
- (:pre
-  "(if (Time now to_i even?)
-     \"偶数\")")
- (if (Time now to_i even?)
-     "偶数"))
 
 (:h3 "render")
+
+(:p "パーシャばもなんとか。")
 
 (:p (:pre "(= render (\"partial\"))"))
 (= render ("partial"))
 
 
 (:h3 "form")
+
+(:p "フォーム")
+
+(:p (:pre "(= form_for (Facility first)
+   (lambda (f)
+     (:p "フォームの中です<p>")
+     (:p
+      (= f label (\:name))
+      (= f text_field (\:name))
+      (= f submit))))"))
 
 (= form_for (Facility first)
    (lambda (f)
