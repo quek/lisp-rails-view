@@ -1,23 +1,24 @@
 (defpackage :lisp-rails-view
-  (:use :cl))
+  (:use :cl)
+  (:shadow :#=))
 
 (in-package :lisp-rails-view)
 
 (defvar *buffer* nil)
 
-(defclass raw ()
+(defclass ruby-code ()
   ((value :initarg :value :accessor value)))
 
-(defclass raw= (raw) ())
+(defclass =ruby-code (ruby-code) ())
 
 (defclass html-safe ()
   ((value :initarg :value :accessor value)))
 
-(defun raw (x)
-  (make-instance 'raw :value x))
+(defun ruby-code (x)
+  (make-instance 'ruby-code :value x))
 
-(defun raw= (x)
-  (make-instance 'raw= :value x))
+(defun =ruby-code (x)
+  (make-instance '=ruby-code :value x))
 
 (defun html-safe (x)
   (make-instance 'html-safe :value x))
@@ -67,7 +68,9 @@
                              (html-safe (escape x))
                              x))))
              (flush ()
-               (when buffer (%write buffer)))
+               (when buffer
+                 (%write buffer)
+                 (setf buffer nil)))
              (%write (x)
                (format stream "~a~%" (to-ruby-exp x))))
       (loop for i in (nreverse *buffer*)
@@ -106,10 +109,10 @@
 (defmethod to-ruby-exp ((x number))
   (to-ruby-exp (princ-to-string x)))
 
-(defmethod to-ruby-exp ((x raw))
+(defmethod to-ruby-exp ((x ruby-code))
   (value x))
 
-(defmethod to-ruby-exp ((x raw=))
+(defmethod to-ruby-exp ((x =ruby-code))
   (format nil "b__.push(~a)" (value x)))
 
 (defmethod to-ruby-exp ((x html-safe))
@@ -123,14 +126,14 @@
 
 (defmethod %eval ((x cons))
   (cond ((eq '= (car x))
-         (emit (raw= (make-ruby-form (cdr x) t))))
+         (emit (=ruby-code (make-ruby-form (cdr x) t))))
         ((keywordp (car x))
          (process-tag x))
         ((and (symbolp (car x))
               (fboundp (car x)))
          (emit (eval x)))
         (t
-         (emit (raw (make-ruby-form x))))))
+         (emit (ruby-code (make-ruby-form x))))))
 
 (defun process-tag (form)
   (multiple-value-bind (tag id classes) (parse-tag (car form))
