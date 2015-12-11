@@ -1,4 +1,4 @@
-(:h1.title "lisp-rails-view Lisp ビューを書く")
+(:h1.title "lisp-rails-view Lisp でビューを書く")
 
 (:h2 "イストール")
 
@@ -27,6 +27,8 @@
 (:h3 "エスケープ")
 
 (:p "エスケープされるはず。<script>alert(\"hello\");</script>&\"'")
+
+(:p#<x>.<y> :data-foo "<z>" "<&\"'>")
 
 (:h3 "Ruby のコード")
 

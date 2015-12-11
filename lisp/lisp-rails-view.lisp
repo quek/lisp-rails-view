@@ -22,6 +22,21 @@
 (defun html-safe (x)
   (make-instance 'html-safe :value x))
 
+(defun escape (thing)
+  (with-output-to-string (out)
+    (loop for c across (princ-to-string thing)
+          do (cond ((char= #\& c)
+                    (write-string "&amp;" out))
+                   ((char= #\< c)
+                    (write-string "&lt;" out))
+                   ((char= #\> c)
+                    (write-string "&gt;" out))
+                   ((char= #\" c)
+                    (write-string "&quot;" out))
+                   ((char= #\' c)
+                    (write-string "&#x27;" out))
+                   (t (write-char c out))))))
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defmacro with-reader (&body body)
     `(let ((*readtable* (copy-readtable nil)))
@@ -39,9 +54,29 @@
           do (%eval form))))
 
 (defun flush-buffer (stream)
-  ;;TODO constant の連結
-  (loop for x in (nreverse *buffer*)
-        do (format stream "~a~%" (to-ruby-exp x))))
+  (let (buffer)
+    (labels ((<< (x)
+               (setf buffer
+                     (if buffer
+                         (html-safe
+                          (concatenate 'string (value buffer)
+                                       (if (stringp x)
+                                           (escape x)
+                                           (value x))))
+                         (if (stringp x)
+                             (html-safe (escape x))
+                             x))))
+             (flush ()
+               (when buffer (%write buffer)))
+             (%write (x)
+               (format stream "~a~%" (to-ruby-exp x))))
+      (loop for i in (nreverse *buffer*)
+            do (typecase i
+                 ((or string html-safe) (<< i))
+                 (t
+                  (flush)
+                  (%write i))))
+      (flush))))
 
 (defun emit (x)
   (push x *buffer*))
@@ -109,15 +144,15 @@
       (emit (html-safe (with-output-to-string (out)
                          (format out "<~a" tag)
                          (when id
-                           (format out " id=\"~a\"" id))
+                           (format out " id=\"~a\"" (escape id)))
                          (when classes
-                           (format out " class=\"~{~a~^ ~}\"" classes))
+                           (format out " class=\"~{~a~^ ~}\"" (mapcar #'escape classes)))
                          (loop for (k . v) in attributes do
                            (if (constantp v)
                                (if (eq v t)
-                                   (format out " ~a" k)
-                                   (format out " ~a=\"~a\"" k v))
-                               (format out "#{~a == true ? \"~a\" : \"~a=\"~a\"\"}" v k k v)))
+                                   (format out " ~a" (escape k))
+                                   (format out " ~a=\"~a\"" (escape k) (escape v)))
+                               (format out "#{~a == true ? \" ~a\" : \" ~a=\"~a\"\"}" v k k v)))
                          (if /-p
                              (write-string " />" out)
                              (write-string ">" out)))))
