@@ -72,7 +72,7 @@
 
 (:h3 "render")
 
-(:p "パーシャばもなんとか。")
+(:p "パーシャルもなんとか。")
 
 (:p (:pre "(= render (\"partial\"))"))
 (= render ("partial"))

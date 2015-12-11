@@ -15,7 +15,7 @@ module LispRailsView
 
     def self.call(template)
       file = template.identifier
-      x = `sbcl --script #{LISP} #{file}`
+      x = `LANG=ja_JP.UTF-8 sbcl --script #{LISP} #{file}`
       code = <<EOT
 [].tap do |b__|
 def b__.push(x)
@@ -28,12 +28,25 @@ def b__.push(x)
   end
 end
 #{x}
-end.flatten.join.html_safe
+end.flatten
 EOT
       Rails.logger.debug('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
       Rails.logger.debug(code)
       Rails.logger.debug('$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$')
       code
     end
+  end
+
+  module Helper
+    def _layout_for(name=nil)
+      name ||= :layout
+      view_flow.get(name)
+    end
+  end
+end
+
+module ActionView
+  class Base
+    include LispRailsView::Helper
   end
 end
